@@ -4,6 +4,7 @@ import "./globals.css";
 import { WalletProvider } from "@/components/providers/wallet-provider";
 import { QueryProvider } from "@/components/providers/query-provider";
 import { Navigation } from "@/components/navigation";
+import { Toaster } from "@/components/ui/toaster";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -12,7 +13,7 @@ const inter = Inter({
 
 export const metadata: Metadata = {
   title: "Zenith - Advanced DeFi Trading Platform on Aptos",
-  description: "Comprehensive DeFi trading and portfolio management platform built on Aptos blockchain",
+  description: "Comprehensive DeFi trading and portfolio management platform built on Aptos blockchain with Kanalabs, Nodit, and Pinata integration",
 };
 
 export default function RootLayout({
@@ -31,6 +32,7 @@ export default function RootLayout({
                 {children}
               </main>
             </div>
+            <Toaster />
           </WalletProvider>
         </QueryProvider>
       </body>

@@ -1,6 +1,9 @@
 import axios from "axios";
 
-const NODIT_API_BASE_URL = "https://aptos-mainnet.nodit.io";
+const APTOS_NETWORK = process.env.NEXT_PUBLIC_APTOS_NETWORK || "testnet";
+const NODIT_API_BASE_URL = APTOS_NETWORK === "mainnet"
+  ? "https://aptos-mainnet.nodit.io"
+  : "https://aptos-testnet.nodit.io";
 const NODIT_API_KEY = process.env.NEXT_PUBLIC_NODIT_API_KEY || "";
 
 const noditApi = axios.create({

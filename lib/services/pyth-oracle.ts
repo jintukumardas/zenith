@@ -1,7 +1,8 @@
 import { Aptos, AptosConfig, Network } from "@aptos-labs/ts-sdk";
-import { PYTH_CONTRACT, PRICE_FEEDS } from "../constants";
+import { PYTH_CONTRACT, PRICE_FEEDS, APTOS_NETWORK } from "../constants";
 
-const config = new AptosConfig({ network: Network.MAINNET });
+const network = APTOS_NETWORK === "mainnet" ? Network.MAINNET : Network.TESTNET;
+const config = new AptosConfig({ network });
 const aptos = new Aptos(config);
 
 export interface PriceData {

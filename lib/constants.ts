@@ -34,3 +34,8 @@ export const APTOS_GRAPHQL_TESTNET = "https://api.testnet.aptoslabs.com/v1/graph
 // Aptos REST API
 export const APTOS_REST_MAINNET = "https://api.mainnet.aptoslabs.com/v1";
 export const APTOS_REST_TESTNET = "https://api.testnet.aptoslabs.com/v1";
+
+// Use testnet by default based on env
+export const APTOS_NETWORK = process.env.NEXT_PUBLIC_APTOS_NETWORK || "testnet";
+export const APTOS_GRAPHQL_ENDPOINT = APTOS_NETWORK === "mainnet" ? APTOS_GRAPHQL_MAINNET : APTOS_GRAPHQL_TESTNET;
+export const APTOS_REST_ENDPOINT = APTOS_NETWORK === "mainnet" ? APTOS_REST_MAINNET : APTOS_REST_TESTNET;

@@ -1,4 +1,4 @@
-import { APTOS_GRAPHQL_MAINNET } from "../constants";
+import { APTOS_GRAPHQL_ENDPOINT } from "../constants";
 
 export interface StatsData {
   totalValueLocked: number;
@@ -8,7 +8,7 @@ export interface StatsData {
 }
 
 class AptosIndexerService {
-  private endpoint = APTOS_GRAPHQL_MAINNET;
+  private endpoint = APTOS_GRAPHQL_ENDPOINT;
 
   // Execute GraphQL query
   private async query(query: string, variables?: Record<string, any>): Promise<any> {
