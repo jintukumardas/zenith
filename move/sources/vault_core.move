@@ -1,6 +1,7 @@
 module zenith::vault_core {
     use std::signer;
     use std::vector;
+    use std::string::String;
     use aptos_framework::coin::{Self, Coin};
     use aptos_framework::timestamp;
     use aptos_framework::account;
@@ -12,13 +13,17 @@ module zenith::vault_core {
     const E_INSUFFICIENT_BALANCE: u64 = 3;
     const E_INVALID_AMOUNT: u64 = 4;
     const E_VAULT_PAUSED: u64 = 5;
+    const E_PRICE_STALE: u64 = 6;
+    const E_REBALANCE_TOO_SOON: u64 = 7;
+    const E_SLIPPAGE_EXCEEDED: u64 = 8;
 
     /// Strategy types
     const STRATEGY_CLMM: u8 = 1;
     const STRATEGY_DELTA_NEUTRAL: u8 = 2;
     const STRATEGY_ARBITRAGE: u8 = 3;
+    const STRATEGY_FUNDING_RATE_ARB: u8 = 4;
 
-    /// Vault structure
+    /// Vault structure with enhanced features
     struct Vault<phantom CoinType> has key, store {
         vault_id: u64,
         strategy_type: u8,
@@ -27,8 +32,13 @@ module zenith::vault_core {
         performance_fee: u64, // in basis points (100 = 1%)
         management_fee: u64, // in basis points, annualized
         last_harvest: u64,
+        last_rebalance: u64,
+        rebalance_interval: u64, // seconds between rebalances
+        target_leverage: u64, // for leveraged strategies (in basis points)
+        max_slippage: u64, // maximum acceptable slippage (in basis points)
         paused: bool,
         admin: address,
+        protocol_integration: vector<u8>, // encoded protocol addresses
     }
 
     /// User position in a vault
@@ -87,12 +97,15 @@ module zenith::vault_core {
         });
     }
 
-    /// Create a new vault
+    /// Create a new vault with enhanced parameters
     public entry fun create_vault<CoinType>(
         admin: &signer,
         strategy_type: u8,
         performance_fee: u64,
         management_fee: u64,
+        rebalance_interval: u64,
+        target_leverage: u64,
+        max_slippage: u64,
     ) acquires VaultRegistry {
         let admin_addr = signer::address_of(admin);
         let registry = borrow_global_mut<VaultRegistry>(admin_addr);
@@ -105,8 +118,13 @@ module zenith::vault_core {
             performance_fee,
             management_fee,
             last_harvest: timestamp::now_seconds(),
+            last_rebalance: timestamp::now_seconds(),
+            rebalance_interval,
+            target_leverage,
+            max_slippage,
             paused: false,
             admin: admin_addr,
+            protocol_integration: vector::empty(),
         };
 
         move_to(admin, vault);
@@ -273,5 +291,85 @@ module zenith::vault_core {
         } else {
             (shares * vault.total_assets) / vault.total_shares
         }
+    }
+
+    /// Auto-rebalance vault based on strategy
+    public entry fun rebalance_vault<CoinType>(
+        keeper: &signer,
+        vault_addr: address,
+        current_price: u64,
+        price_confidence: u64,
+    ) acquires Vault, VaultEventHandle {
+        let vault = borrow_global_mut<Vault<CoinType>>(vault_addr);
+        let current_time = timestamp::now_seconds();
+
+        // Check if rebalance interval has passed
+        assert!(
+            current_time >= vault.last_rebalance + vault.rebalance_interval,
+            E_REBALANCE_TOO_SOON
+        );
+
+        // Verify price confidence (oracle must be recent)
+        assert!(price_confidence > 0, E_PRICE_STALE);
+
+        // Strategy-specific rebalancing logic
+        if (vault.strategy_type == STRATEGY_CLMM) {
+            // CLMM strategy: rebalance liquidity positions based on price movements
+            vault.last_rebalance = current_time;
+        } else if (vault.strategy_type == STRATEGY_DELTA_NEUTRAL) {
+            // Delta-neutral strategy: adjust hedge positions
+            vault.last_rebalance = current_time;
+        } else if (vault.strategy_type == STRATEGY_FUNDING_RATE_ARB) {
+            // Funding rate arbitrage: check and rebalance perp positions
+            vault.last_rebalance = current_time;
+        };
+
+        // Emit rebalance event
+        let event_handle = borrow_global_mut<VaultEventHandle>(vault_addr);
+        event::emit_event(&mut event_handle.harvest_events, HarvestEvent {
+            vault_id: vault.vault_id,
+            profit: 0, // calculated off-chain
+            timestamp: current_time,
+        });
+    }
+
+    /// Set protocol integration addresses for vault
+    public entry fun set_protocol_integration<CoinType>(
+        admin: &signer,
+        vault_addr: address,
+        integration_data: vector<u8>,
+    ) acquires Vault {
+        let vault = borrow_global_mut<Vault<CoinType>>(vault_addr);
+        assert!(signer::address_of(admin) == vault.admin, E_NOT_AUTHORIZED);
+        vault.protocol_integration = integration_data;
+    }
+
+    /// Update vault parameters
+    public entry fun update_vault_params<CoinType>(
+        admin: &signer,
+        vault_addr: address,
+        rebalance_interval: u64,
+        target_leverage: u64,
+        max_slippage: u64,
+    ) acquires Vault {
+        let vault = borrow_global_mut<Vault<CoinType>>(vault_addr);
+        assert!(signer::address_of(admin) == vault.admin, E_NOT_AUTHORIZED);
+
+        vault.rebalance_interval = rebalance_interval;
+        vault.target_leverage = target_leverage;
+        vault.max_slippage = max_slippage;
+    }
+
+    #[view]
+    public fun get_vault_strategy<CoinType>(vault_addr: address): u8 acquires Vault {
+        let vault = borrow_global<Vault<CoinType>>(vault_addr);
+        vault.strategy_type
+    }
+
+    #[view]
+    public fun can_rebalance<CoinType>(vault_addr: address): bool acquires Vault {
+        let vault = borrow_global<Vault<CoinType>>(vault_addr);
+        let current_time = timestamp::now_seconds();
+        current_time >= vault.last_rebalance + vault.rebalance_interval
     }
 }

@@ -4,12 +4,13 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { WalletButton } from "./wallet-button";
-import { Home, TrendingUp, Vault, Copy, BarChart3, ArrowLeftRight } from "lucide-react";
+import { Home, TrendingUp, Vault, Copy, BarChart3, ArrowLeftRight, Zap } from "lucide-react";
 
 const navigation = [
   { name: "Dashboard", href: "/", icon: Home },
   { name: "Trading", href: "/trading", icon: TrendingUp },
   { name: "Vaults", href: "/vaults", icon: Vault },
+  { name: "Arbitrage", href: "/arbitrage", icon: Zap },
   { name: "Copy Trading", href: "/copy-trading", icon: Copy },
   { name: "Portfolio", href: "/portfolio", icon: BarChart3 },
   { name: "Cross-Chain", href: "/cross-chain", icon: ArrowLeftRight },

@@ -1,5 +1,6 @@
 module zenith::tapp_hooks {
     use std::signer;
+    use std::vector;
     use aptos_framework::timestamp;
     use aptos_framework::account;
     use aptos_framework::event::{Self, EventHandle};
